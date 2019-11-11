@@ -42,7 +42,10 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public final class MGRRuntimeContext extends AbstractRuntimeContext<MGRRule> {
-    
+    private static final String PLUGIN_STATUS = "SELECT * FROM information_schema.PLUGINS WHERE PLUGIN_NAME='group_replication'";
+    private static final String MEMBER_COUNT = "SELECT count(*) FROM performance_schema.replication_group_members";
+    private static final String GROUP_NAME = "SELECT * FROM performance_schema.global_variables WHERE VARIABLE_NAME='group_replication_group_name'";
+    private static final String SINGLE_PRIMARY = "SELECT * FROM performance_schema.global_variables WHERE VARIABLE_NAME='group_replication_single_primary_mode'";
     private DatabaseMetaData cachedDatabaseMetaData;
     
     private String primaryDataSource;
@@ -86,27 +89,23 @@ public final class MGRRuntimeContext extends AbstractRuntimeContext<MGRRule> {
      * @throws SQLException SQL Exception
      */
     public void checkMGRConfig(final Map<String, DataSource> dataSourceMap) throws SQLException {
-        String pluginStatus = "SELECT * FROM information_schema.PLUGINS WHERE PLUGIN_NAME='group_replication'";
-        String memberCount = "SELECT count(*) FROM performance_schema.replication_group_members";
-        String groupName = "SELECT * FROM performance_schema.global_variables WHERE VARIABLE_NAME='group_replication_group_name'";
-        String singlePrimary = "SELECT * FROM performance_schema.global_variables WHERE VARIABLE_NAME='group_replication_single_primary_mode'";
         try (Connection connection = dataSourceMap.get(primaryDataSource).getConnection();
              Statement statement = connection.createStatement()) {
-            ResultSet resultSet = statement.executeQuery(pluginStatus);
+            ResultSet resultSet = statement.executeQuery(PLUGIN_STATUS);
             while (resultSet.next()) {
                 if (!"ACTIVE".equals(resultSet.getString("PLUGIN_STATUS"))) {
                     throw new ShardingException("MGR plugin is not active.");
                 }
             }
             resultSet.close();
-            resultSet = statement.executeQuery(memberCount);
+            resultSet = statement.executeQuery(MEMBER_COUNT);
             while (resultSet.next()) {
                 if (Integer.parseInt(resultSet.getString(1)) < 1) {
                     throw new ShardingException("MGR member count < 1");
                 }
             }
             resultSet.close();
-            resultSet = statement.executeQuery(groupName);
+            resultSet = statement.executeQuery(GROUP_NAME);
             while (resultSet.next()) {
                 String serverGroupName = resultSet.getString("VARIABLE_VALUE");
                 String ruleGroupName = getRule().getGroupName();
@@ -116,7 +115,7 @@ public final class MGRRuntimeContext extends AbstractRuntimeContext<MGRRule> {
                 }
             }
             resultSet.close();
-            resultSet = statement.executeQuery(singlePrimary);
+            resultSet = statement.executeQuery(SINGLE_PRIMARY);
             while (resultSet.next()) {
                 if (!"ON".equals(resultSet.getString("VARIABLE_VALUE"))) {
                     throw new ShardingException("MGR is not in single primary mode");
