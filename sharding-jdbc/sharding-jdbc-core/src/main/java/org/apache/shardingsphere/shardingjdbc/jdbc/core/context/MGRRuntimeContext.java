@@ -42,10 +42,15 @@ import java.util.concurrent.TimeUnit;
  */
 @Getter
 public final class MGRRuntimeContext extends AbstractRuntimeContext<MGRRule> {
+    
     private static final String PLUGIN_STATUS = "SELECT * FROM information_schema.PLUGINS WHERE PLUGIN_NAME='group_replication'";
+    
     private static final String MEMBER_COUNT = "SELECT count(*) FROM performance_schema.replication_group_members";
+    
     private static final String GROUP_NAME = "SELECT * FROM performance_schema.global_variables WHERE VARIABLE_NAME='group_replication_group_name'";
+    
     private static final String SINGLE_PRIMARY = "SELECT * FROM performance_schema.global_variables WHERE VARIABLE_NAME='group_replication_single_primary_mode'";
+    
     private DatabaseMetaData cachedDatabaseMetaData;
     
     private String primaryDataSource;
